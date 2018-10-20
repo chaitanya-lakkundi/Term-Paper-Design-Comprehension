@@ -14,13 +14,21 @@ for (name, link) in data:
 
 import requests
 import glob
-scraped_xmis = glob.glob1("scraped_xmis", "*.xmi")
+import simpleflock
+from os.path import exists
 
-for project_name, xmi_link in all_xmis:    
-    filename = project_name.replace("/", "_") + xmi_link.split("/")[-1]    
-    if filename in scraped_xmis:
-        continue
+for project_name, xmi_link in all_xmis:
+    filename = "scraped_xmis/" + project_name.replace("/", "_") + xmi_link.split("/")[-1]
+    
+    with simpleflock.SimpleFlock("/tmp/scrape_select_file"):
+        if exists(filename):
+            continue
+        else:
+            open(filename, "w").close()
+
     print(xmi_link)
     page = requests.get(xmi_link)
-    with open("scraped_xmis/"+filename, "wb") as f:
-        f.write(page.content)
+
+    with simpleflock.SimpleFlock("/tmp/scrape_file_write"):
+        with open(filename, "wb") as f:
+            f.write(page.content)
