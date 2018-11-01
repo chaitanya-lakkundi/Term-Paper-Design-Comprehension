@@ -5,16 +5,14 @@ import simpleflock as sf
 from subprocess import call
 from time import sleep
 
-username_emails_list = set()
-
-def chooseEmails(filename, count):
+def chooseRepos(filename, count):
     choices = []
     with sf.SimpleFlock("/tmp/" + filename + "_lock"):
         with open(filename) as rf:
             choices.extend([line.strip() for line in rf.readlines()[:count]])
         call("sed -i '1," + str(count) + "d' " + filename, shell=True)
     if not choices:
-        raise Exception("File Empty")
+        raise EOFError("File Empty")
     return choices
 
 def writeEmails(user_emails_list):
@@ -23,8 +21,7 @@ def writeEmails(user_emails_list):
             for username,email in user_emails_list:
                 f.write(username+","+email+"\n")
 
-def getEmail(user_project):
-    global username_emails_list
+def getEmail(user_project, username_emails_list):
     print(user_project)
 
     r = requests.get('https://github.com/'+ user_project + "/commits")
@@ -45,7 +42,7 @@ def getEmail(user_project):
     email = email_line[start_pos:-1]
     username = user_project.split("/")[0]
     print(username, email)
-    username_emails_list.add((username, email))
+    username_emails_list.append((user_project, email))
     if len(username_emails_list) >= 10:
         writeEmails(username_emails_list)
         username_emails_list.clear()
@@ -56,9 +53,10 @@ def patchUnfinished(username_list_filename, choices):
             wf.write("\n".join(choices) + "\n")
 
 def main(choices):
+    username_emails_list = list()
     try:
         for line in choices:
-            getEmail(line.strip())
+            getEmail(line.strip(), username_emails_list)
     except Exception as e:
         print(str(e))
 
@@ -68,7 +66,7 @@ if __name__ == "__main__":
         username_list_filename = argv[1]
         choices = []
         while True:
-            choices = chooseEmails(username_list_filename, 10)
+            choices = chooseRepos(username_list_filename, 10)
             main(choices)
 
     except:
