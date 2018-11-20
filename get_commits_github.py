@@ -74,7 +74,6 @@ if __name__ == "__main__":
     except EOFError:
         print("Finished")
 
-    except Exception as e:
-    	print(str(e))
+    except:
         patchUnfinished(project_names_filename, choices)
         print("Handled Patch Unfinished")
